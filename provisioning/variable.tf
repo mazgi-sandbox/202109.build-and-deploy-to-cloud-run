@@ -1,10 +1,10 @@
 variable "base_dnsdomain" {
-  default = "example.dev"
+  default = "example.com"
 }
 
-variable "aws_default_region" {}
-variable "aws_access_key" {}
-variable "aws_secret_key" {}
+# variable "aws_default_region" {}
+# variable "aws_access_key" {}
+# variable "aws_secret_key" {}
 
 variable "gcp_default_region" {
   default = "us-central1"

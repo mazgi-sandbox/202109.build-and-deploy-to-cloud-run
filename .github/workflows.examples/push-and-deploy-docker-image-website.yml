@@ -1,0 +1,63 @@
+name: push-and-deploy-docker-image-website
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          cat<<EOE > .env
+          CLOUDSDK_CORE_PROJECT=YOUR_GCP_PROJECT_ID
+          CURRENT_ENV_NAME=production
+          EOE
+      - run: |
+          cat .env >> $GITHUB_ENV
+      - name: enable buildkit
+        run: |
+          echo "DOCKER_BUILDKIT=1" >> $GITHUB_ENV
+      - name: Store the Short SHA Hash
+        run: echo SHORT_SHA=$(echo '${{ toJSON(github) }}' | jq -r '.sha[0:7]') >> $GITHUB_ENV
+      - name: Store the Docker Tag
+        run: echo DOCKER_TAG="gcr.io/${CLOUDSDK_CORE_PROJECT}/website:$(date +%Y%m)-${SHORT_SHA}" >> $GITHUB_ENV
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          service_account_key: ${{ secrets.GCR_PUSHER_GOOGLE_SA_KEY }}
+          export_default_credentials: true
+      - name: Sign in to gcr.io
+        run: gcloud auth configure-docker gcr.io --quiet
+      - name: Build the Docker Image
+        run: |
+          mkdir -p Dockerfile.d/website/rootfs/workspace/
+          git archive HEAD website/ | tar x --strip-components=1 -C Dockerfile.d/website/rootfs/workspace/
+          docker build\
+           --no-cache\
+           --tag=${DOCKER_TAG}\
+           Dockerfile.d/website/
+      - name: Push the Docker Image
+        run: |
+          docker push ${DOCKER_TAG}
+      - name: Push the Docker Image as the Latest Tag
+        run: |
+          docker tag ${DOCKER_TAG} gcr.io/${CLOUDSDK_CORE_PROJECT}/website:latest
+          docker push gcr.io/${CLOUDSDK_CORE_PROJECT}/website:latest
+        if: github.ref == 'refs/heads/main'
+      - name: Generate the Metadata
+        run: |
+          sed 's!gcr.io/"${CLOUDSDK_CORE_PROJECT}"/website:latest!'"${DOCKER_TAG}"'!' config/production/website/cloud-run.metadata.yml > tmp/provisioning/cloud-run.metadata.yml
+          cat tmp/provisioning/cloud-run.metadata.yml
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@main
+        with:
+          metadata: tmp/provisioning/cloud-run.metadata.yml
+        if: github.ref == 'refs/heads/main'
+      - name: Get the Deployed Content
+        run: curl "${{ steps.deploy.outputs.url }}"
+        if: github.ref == 'refs/heads/main'

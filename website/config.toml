@@ -1,0 +1,38 @@
+baseURL = "https://example.org/"
+canonifyURLs = true
+# defaultContentLanguage = "en"
+defaultContentLanguage = "ja"
+# defaultContentLanguageInSubdir = true
+enableEmoji = true
+enableGitInfo = false
+enableRobotsTXT = true
+# googleAnalytics = "UA-00000000-1"
+hasCJKLanguage = true
+languageCode = "en-us"
+pygmentsCodeFences = true
+pygmentsStyle = "friendly"
+title = "A Hugo Theme"
+theme = "techlog-simple"
+
+[languages]
+[languages.en]
+languageName = "English"
+weight = 1
+
+[languages.ja]
+languageName = "日本語"
+weight = 10
+
+[params]
+description = "A simple Hugo theme for your profile :)"
+
+[params.sns]
+# facebook = ""
+github = "mazgi"
+instagram = "mazgi"
+twitter = "mazgi"
+
+[taxonomies]
+author = "authors"
+category = "categories"
+tag = "tags"
